@@ -2,7 +2,7 @@
 # CLI FORMATTER
 # =============================================================================
 #
-# Colored CLI table output replicating the analyze-document.sh shell script.
+# Colored CLI output for TF-IDF Zone Analysis results.
 #
 # =============================================================================
 
@@ -35,6 +35,11 @@ def _c(code: str, text: str) -> str:
     return f"{code}{text}{RESET}"
 
 
+def _kv(key: str, value: str) -> None:
+    """Print a key-value pair with consistent formatting."""
+    print(f"  {_c(CYAN, f'{key:<13}')} {_c(WHITE, value)}")
+
+
 # ── Output Functions ─────────────────────────────────────────────────────────
 
 
@@ -55,16 +60,24 @@ def print_summary(
     chunks: int,
     chunk_size: int,
     elapsed: float,
+    wordnet: bool = False,
+    min_df: int | None = None,
+    min_tf: int | None = None,
 ) -> None:
     """Print the summary block."""
-    print(f"  {_c(DIM, 'file')}         {_c(WHITE, filename)}")
-    print(f"  {_c(DIM, 'engine')}       {_c(WHITE, engine)}")
-    print(f"  {_c(DIM, 'ngram_type')}   {_c(WHITE, ngram_type)}")
-    print(f"  {_c(DIM, 'text_length')}  {_c(WHITE, f'{text_length:,} chars')}")
-    print(f"  {_c(DIM, 'tokens')}       {_c(WHITE, f'{tokens:,}')}")
-    print(f"  {_c(DIM, 'chunks')}       {_c(WHITE, str(chunks))}")
-    print(f"  {_c(DIM, 'chunk_size')}   {_c(WHITE, str(chunk_size))}")
-    print(f"  {_c(DIM, 'elapsed')}      {_c(GREEN, f'{elapsed:.3f}s')}")
+    _kv("file", filename)
+    _kv("engine", engine)
+    _kv("ngram_type", ngram_type)
+    _kv("text_length", f"{text_length:,} chars")
+    _kv("tokens", f"{tokens:,}")
+    _kv("chunks", str(chunks))
+    _kv("chunk_size", str(chunk_size))
+    if wordnet:
+        _kv("wordnet", "on")
+    if min_df is not None:
+        _kv("min_df", str(min_df))
+    if min_tf is not None:
+        _kv("min_tf", str(min_tf))
     print()
 
 
@@ -72,9 +85,9 @@ def print_df_stats(df_stats: dict) -> None:
     """Print the DF distribution statistics."""
     print(f"  {_c(BOLD + CYAN, 'DF Distribution')}")
     print(f"  {_c(DIM, '═' * 40)}")
-    print(f"  {_c(DIM, 'mean')}         {_c(WHITE, str(df_stats['mean']))}")
-    print(f"  {_c(DIM, 'median')}       {_c(WHITE, str(df_stats['median']))}")
-    print(f"  {_c(DIM, 'mode')}         {_c(WHITE, str(df_stats['mode']))}")
+    _kv("mean", str(df_stats["mean"]))
+    _kv("median", str(df_stats["median"]))
+    _kv("mode", str(df_stats["mode"]))
     print()
 
 
@@ -95,14 +108,16 @@ def print_zone(label: str, color: str, terms: list[dict]) -> None:
 
 def print_zones(zones: dict) -> None:
     """Print all three zone tables."""
-    print_zone("TOO COMMON  (top 10%)", YELLOW, zones["too_common"])
-    print_zone("GOLDILOCKS  (45th\u201355th pct)", GREEN, zones["goldilocks"])
-    print_zone("TOO RARE    (bottom 10%)", MAGENTA, zones["too_rare"])
+    print_zone("TOO COMMON  (df > 0.2N)", YELLOW, zones["too_common"])
+    print_zone("GOLDILOCKS  (tfidf >= Q95, 3 <= df <= 0.2N)", GREEN, zones["goldilocks"])
+    print_zone("TOO RARE    (df < 3)", MAGENTA, zones["too_rare"])
 
 
-def print_footer() -> None:
-    """Print the footer."""
-    print(f"  {_c(DIM, 'Done.')}")
+def print_footer(elapsed: float) -> None:
+    """Print the footer with elapsed time."""
+    secs = int(round(elapsed))
+    print(f"  {_c(DIM, '─' * 40)}")
+    print(f"  {_c(GREEN, f'Completed in {secs}s')}")
     print()
 
 
@@ -116,27 +131,36 @@ def print_corpus_summary(
     chunks: int,
     chunk_size: int,
     elapsed: float,
+    wordnet: bool = False,
+    min_df: int | None = None,
+    min_tf: int | None = None,
 ) -> None:
     """Print the summary block for corpus (directory) mode."""
-    print(f"  {_c(DIM, 'directory')}    {_c(WHITE, dirname)}")
-    print(f"  {_c(DIM, 'engine')}       {_c(WHITE, engine)}")
-    print(f"  {_c(DIM, 'ngram_type')}   {_c(WHITE, ngram_type)}")
-    print(f"  {_c(DIM, 'files')}        {_c(WHITE, str(file_count))}")
-    print(f"  {_c(DIM, 'text_length')}  {_c(WHITE, f'{total_text_length:,} chars')}")
-    print(f"  {_c(DIM, 'tokens')}       {_c(WHITE, f'{tokens:,}')}")
+    _kv("directory", dirname)
+    _kv("engine", engine)
+    _kv("ngram_type", ngram_type)
+    _kv("files", str(file_count))
+    _kv("text_length", f"{total_text_length:,} chars")
+    _kv("tokens", f"{tokens:,}")
     if chunk_size == 0:
-        print(f"  {_c(DIM, 'documents')}    {_c(WHITE, str(chunks))}")
-        print(f"  {_c(DIM, 'chunking')}     {_c(WHITE, 'off (1 file = 1 doc)')}")
+        _kv("documents", str(chunks))
+        _kv("chunking", "off (1 file = 1 doc)")
     else:
-        print(f"  {_c(DIM, 'chunks')}       {_c(WHITE, str(chunks))}")
-        print(f"  {_c(DIM, 'chunk_size')}   {_c(WHITE, str(chunk_size))}")
-    print(f"  {_c(DIM, 'elapsed')}      {_c(GREEN, f'{elapsed:.3f}s')}")
+        _kv("chunks", str(chunks))
+        _kv("chunk_size", str(chunk_size))
+    if wordnet:
+        _kv("wordnet", "on")
+    if min_df is not None:
+        _kv("min_df", str(min_df))
+    if min_tf is not None:
+        _kv("min_tf", str(min_tf))
     print()
 
 
 def print_progress(current: int, total: int, filename: str) -> None:
-    """Print file reading progress for directory mode."""
-    print(f"  {_c(DIM, f'[{current}/{total}]')} {_c(WHITE, filename)}", flush=True)
+    """Print file reading progress for directory mode (single updating line)."""
+    end = "\n" if current == total else ""
+    print(f"\r  {_c(DIM, f'[{current}/{total}]')} {_c(WHITE, 'Files Processed')}", end=end, flush=True)
 
 
 def print_error(message: str) -> None:
