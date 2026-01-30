@@ -75,6 +75,7 @@ class TestRun:
         result = run(text, ngram=1, chunk_size=500, top_k=5)
         for entry in result.top_terms:
             assert "term" in entry
+            assert "tf" in entry
             assert "score" in entry
             assert "df" in entry
             assert "idf" in entry
