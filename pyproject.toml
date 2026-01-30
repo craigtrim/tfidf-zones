@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tfidf-zones"
-version = "1.2.0"
+version = "1.2.1"
 description = "TF-IDF zone analysis CLI — classify terms into too-common, goldilocks, and too-rare zones"
 authors = ["Craig Trim <craigtrim@gmail.com>"]
 maintainers = ["Craig Trim <craigtrim@gmail.com>"]
