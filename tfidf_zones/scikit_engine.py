@@ -19,7 +19,13 @@ from __future__ import annotations
 import logging
 import statistics
 
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+try:
+    from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+except ImportError:
+    raise ImportError(
+        "scikit-learn is required for the --scikit engine. "
+        "Install it with: pip install tfidf-zones[scikit]"
+    )
 
 from tfidf_zones.tfidf_engine import EngineResult, NGRAM_LABELS, MIN_CHUNK_SIZE
 from tfidf_zones.tokenizer import Tokenizer
