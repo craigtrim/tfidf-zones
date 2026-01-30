@@ -16,21 +16,22 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import sys
 from pathlib import Path
 
+from tfidf_zones.api import _apply_filters as _api_apply_filters
+from tfidf_zones.api import to_csv
 from tfidf_zones.formatter import (
     print_corpus_summary,
     print_df_stats,
     print_error,
     print_footer,
     print_header,
+    print_output,
     print_progress,
     print_summary,
 )
 from tfidf_zones.runner import analyze_corpus, analyze_file
-from tfidf_zones.zones import classify_zones
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -127,19 +128,9 @@ def _apply_filters(result, min_df: int | None, min_tf: int | None, top_k: int) -
 
     Mutates result in place: filters all_scored, top_terms, and re-classifies zones.
     """
-    if min_df is None and min_tf is None:
-        return
-
-    er = result.engine_result
-    filtered = er.all_scored
-    if min_df is not None:
-        filtered = [t for t in filtered if t["df"] >= min_df]
-    if min_tf is not None:
-        filtered = [t for t in filtered if t.get("tf", 0) >= min_tf]
-
-    er.all_scored = filtered
-    er.top_terms = sorted(filtered, key=lambda x: x["score"], reverse=True)[:top_k]
-    result.zones = classify_zones(filtered, top_k=top_k, chunk_count=er.chunk_count)
+    result.engine_result, result.zones = _api_apply_filters(
+        result.engine_result, result.zones, min_df, min_tf, top_k,
+    )
 
 
 def _print_result(result, args) -> None:
@@ -179,72 +170,11 @@ def _print_result(result, args) -> None:
     print_df_stats(r.df_stats)
 
 
-def _build_zone_lookup(all_scored: list[dict], chunk_count: int) -> dict[str, int]:
-    """Classify every term into a zone: 1=too_common, 2=goldilocks, 3=too_rare.
-
-    Uses the same band-pass logic as classify_zones but without top_k limits,
-    so every term gets a zone assignment.
-    """
-    if not all_scored:
-        return {}
-
-    n = chunk_count if chunk_count > 0 else max(t["df"] for t in all_scored)
-    df_upper = max(3, int(n * 0.2))
-    df_lower = 3
-    if df_upper <= df_lower:
-        df_lower = 2
-        df_upper = max(df_lower + 1, df_upper)
-
-    scores = sorted((t["score"] for t in all_scored), reverse=True)
-    p95_index = max(0, int(len(scores) * 0.05) - 1)
-    tfidf_threshold = scores[p95_index]
-
-    lookup: dict[str, int] = {}
-    for t in all_scored:
-        df = t["df"]
-        if df > df_upper:
-            lookup[t["term"]] = 1
-        elif df < df_lower:
-            lookup[t["term"]] = 3
-        elif t["score"] >= tfidf_threshold:
-            lookup[t["term"]] = 2
-    return lookup
-
-
 def _write_csv(result, output_path: str) -> None:
-    """Write all scored terms to CSV with cumulative TF columns and zone."""
-    all_scored = result.engine_result.all_scored
-    total_tokens = result.engine_result.total_tokens
-
-    # Build zone lookup: 1=too_common, 2=goldilocks, 3=too_rare
-    zone_lookup = _build_zone_lookup(all_scored, result.engine_result.chunk_count)
-
-    # Build cumulative TF lookup: sort by TF descending, compute running sum
-    tf_sorted = sorted(all_scored, key=lambda x: x.get("tf", 0), reverse=True)
-    cum_lookup: dict[str, tuple[float, int]] = {}
-    running = 0.0
-    for entry in tf_sorted:
-        tf_pct = entry.get("tf", 0) / total_tokens if total_tokens > 0 else 0.0
-        running += tf_pct
-        tf_cum_norm = max(1, round(running * 100)) if total_tokens > 0 else 0
-        cum_lookup[entry["term"]] = (tf_pct, tf_cum_norm)
-
-    with open(output_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(["term", "tf", "df", "idf", "tfidf", "tf_pct", "tf_cum_norm", "zone"])
-        for entry in all_scored:
-            tf_pct, tf_cum_norm = cum_lookup[entry["term"]]
-            zone = zone_lookup.get(entry["term"], "")
-            writer.writerow([
-                entry["term"],
-                entry.get("tf", 0),
-                entry["df"],
-                entry["idf"],
-                entry["score"],
-                tf_pct,
-                tf_cum_norm,
-                zone,
-            ])
+    """Write all scored terms to CSV."""
+    csv_content = to_csv(result)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(csv_content)
 
 
 def main() -> None:
@@ -303,6 +233,8 @@ def main() -> None:
             _apply_filters(result, args.min_df, args.min_tf, args.top_k)
             _print_result(result, args)
             _write_csv(result, args.output)
+            out = Path(args.output)
+            print_output(args.output, len(result.engine_result.all_scored), out.stat().st_size)
             print_footer(result.elapsed)
 
         else:
@@ -327,6 +259,8 @@ def main() -> None:
             _apply_filters(result, args.min_df, args.min_tf, args.top_k)
             _print_result(result, args)
             _write_csv(result, args.output)
+            out = Path(args.output)
+            print_output(args.output, len(result.engine_result.all_scored), out.stat().st_size)
             print_footer(result.elapsed)
 
     except FileNotFoundError as e:
