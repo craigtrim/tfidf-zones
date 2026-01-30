@@ -271,6 +271,11 @@ def main() -> None:
         print_error("top-k must be >= 1")
         sys.exit(1)
 
+    # Validate --no-ngram-stopwords requires --ngram >= 2
+    if args.no_ngram_stopwords and args.ngram < 2:
+        print_error("--no-ngram-stopwords requires --ngram >= 2")
+        sys.exit(1)
+
     # Validate chunk-size
     if args.chunk_size < 100:
         print_error("chunk-size must be >= 100")
