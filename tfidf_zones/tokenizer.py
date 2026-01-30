@@ -317,6 +317,7 @@ class Tokenizer:
         strip_accents: bool = False,
         normalize_unicode: bool = True,
         clean_text: bool = True,
+        wordnet_filter: bool = False,
     ):
         self.lowercase = lowercase
         self.min_length = min_length
@@ -332,6 +333,18 @@ class Tokenizer:
         self.strip_accents = strip_accents
         self.normalize_unicode = normalize_unicode
         self.clean_text = clean_text
+        self.wordnet_filter = wordnet_filter
+
+        if wordnet_filter:
+            try:
+                from wordnet_lookup import is_wordnet_term
+
+                self._is_wordnet_term = is_wordnet_term
+            except ImportError:
+                raise ImportError(
+                    "wordnet-lookup package is required for --wordnet filtering. "
+                    "Install with: poetry install"
+                )
 
     def _preprocess_text(self, text: str) -> str:
         """Apply unicode normalization and text cleaning."""
@@ -413,6 +426,11 @@ class Tokenizer:
 
             if self._should_keep_token(token, token_type):
                 if " " in token:
-                    yield from token.split()
+                    for sub_token in token.split():
+                        if self.wordnet_filter and not self._is_wordnet_term(sub_token):
+                            continue
+                        yield sub_token
                 else:
+                    if self.wordnet_filter and not self._is_wordnet_term(token):
+                        continue
                     yield token
