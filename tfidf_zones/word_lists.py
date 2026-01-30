@@ -1029,3 +1029,15 @@ STOP_WORDS: frozenset[str] = frozenset(
     word for word in _STOP_WORDS_RAW if word not in FUNCTION_WORDS
 )
 """Frozen set of English stop words, guaranteed disjoint from FUNCTION_WORDS."""
+
+# Combined set for n-gram filtering
+NGRAM_STOP_WORDS: frozenset[str] = FUNCTION_WORDS | STOP_WORDS
+"""Union of function words and stop words, used by --no-ngram-stopwords."""
+
+
+def filter_ngrams(ngrams: list[str], stop_words: frozenset[str] = NGRAM_STOP_WORDS) -> list[str]:
+    """Remove n-grams where any constituent token is a stop/function word.
+
+    N-grams use underscore as separator (e.g. "of_the", "in_a").
+    """
+    return [ng for ng in ngrams if not any(t in stop_words for t in ng.split("_"))]

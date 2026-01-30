@@ -99,23 +99,29 @@ def _make_custom_analyzer(tokenizer: Tokenizer):
     return analyzer
 
 
-def _make_ngram_analyzer(n: int, tokenizer: Tokenizer):
+def _make_ngram_analyzer(n: int, tokenizer: Tokenizer, ngram_filter=None):
     """Factory for an n-gram analyzer using the given tokenizer."""
     def analyzer(text: str) -> list[str]:
         tokens = tokenizer.tokenize(text)
         if len(tokens) < n:
             return []
-        return ["_".join(tokens[i:i + n]) for i in range(len(tokens) - n + 1)]
+        ngrams = ["_".join(tokens[i:i + n]) for i in range(len(tokens) - n + 1)]
+        if ngram_filter is not None:
+            ngrams = ngram_filter(ngrams)
+        return ngrams
     return analyzer
 
 
-def _make_skipgram_analyzer(tokenizer: Tokenizer):
+def _make_skipgram_analyzer(tokenizer: Tokenizer, ngram_filter=None):
     """Factory for a skipgram analyzer using the given tokenizer."""
     def analyzer(text: str) -> list[str]:
         tokens = tokenizer.tokenize(text)
         if len(tokens) < 3:
             return []
-        return [f"{tokens[i]}_{tokens[i + 2]}" for i in range(len(tokens) - 2)]
+        ngrams = [f"{tokens[i]}_{tokens[i + 2]}" for i in range(len(tokens) - 2)]
+        if ngram_filter is not None:
+            ngrams = ngram_filter(ngrams)
+        return ngrams
     return analyzer
 
 
@@ -130,7 +136,7 @@ skipgram_analyzer = _make_skipgram_analyzer(_tokenizer)
 # =============================================================================
 
 
-def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50, wordnet: bool = False) -> EngineResult:
+def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50, wordnet: bool = False, no_ngram_stopwords: bool = False) -> EngineResult:
     """Run the scikit-learn TF-IDF engine on raw text.
 
     Tokenizes text using the pystylometry Tokenizer (same as the pure engine),
@@ -143,17 +149,27 @@ def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50, word
     if top_k < 1:
         raise ValueError(f"top_k must be >= 1, got {top_k}")
 
+    # Optional n-gram stop word filter
+    _filter = None
+    if no_ngram_stopwords and ngram >= 2:
+        from tfidf_zones.word_lists import filter_ngrams
+        _filter = filter_ngrams
+
     # Select tokenizer and analyzers
     if wordnet:
         tok = _make_tokenizer(wordnet=True)
         _uni = _make_custom_analyzer(tok)
-        _ngram_fn = lambda n: _make_ngram_analyzer(n, tok)
-        _skip = _make_skipgram_analyzer(tok)
+        _ngram_fn = lambda n: _make_ngram_analyzer(n, tok, ngram_filter=_filter)
+        _skip = _make_skipgram_analyzer(tok, ngram_filter=_filter)
     else:
         tok = _tokenizer
         _uni = custom_analyzer
-        _ngram_fn = make_ngram_analyzer
-        _skip = skipgram_analyzer
+        if _filter is not None:
+            _ngram_fn = lambda n: _make_ngram_analyzer(n, _tokenizer, ngram_filter=_filter)
+            _skip = _make_skipgram_analyzer(_tokenizer, ngram_filter=_filter)
+        else:
+            _ngram_fn = make_ngram_analyzer
+            _skip = skipgram_analyzer
 
     # Count total tokens before chunking
     all_tokens = tok.tokenize(text)
@@ -251,7 +267,7 @@ def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50, word
     )
 
 
-def run_docs(docs: list[str], ngram: int = 1, top_k: int = 50, wordnet: bool = False) -> EngineResult:
+def run_docs(docs: list[str], ngram: int = 1, top_k: int = 50, wordnet: bool = False, no_ngram_stopwords: bool = False) -> EngineResult:
     """Run TF-IDF where each document string is one corpus document (no chunking).
 
     Each entry in docs is passed directly to TfidfVectorizer as a separate
@@ -264,17 +280,27 @@ def run_docs(docs: list[str], ngram: int = 1, top_k: int = 50, wordnet: bool = F
     if top_k < 1:
         raise ValueError(f"top_k must be >= 1, got {top_k}")
 
+    # Optional n-gram stop word filter
+    _filter = None
+    if no_ngram_stopwords and ngram >= 2:
+        from tfidf_zones.word_lists import filter_ngrams
+        _filter = filter_ngrams
+
     # Select tokenizer and analyzers
     if wordnet:
         tok = _make_tokenizer(wordnet=True)
         _uni = _make_custom_analyzer(tok)
-        _ngram_fn = lambda n: _make_ngram_analyzer(n, tok)
-        _skip = _make_skipgram_analyzer(tok)
+        _ngram_fn = lambda n: _make_ngram_analyzer(n, tok, ngram_filter=_filter)
+        _skip = _make_skipgram_analyzer(tok, ngram_filter=_filter)
     else:
         tok = _tokenizer
         _uni = custom_analyzer
-        _ngram_fn = make_ngram_analyzer
-        _skip = skipgram_analyzer
+        if _filter is not None:
+            _ngram_fn = lambda n: _make_ngram_analyzer(n, _tokenizer, ngram_filter=_filter)
+            _skip = _make_skipgram_analyzer(_tokenizer, ngram_filter=_filter)
+        else:
+            _ngram_fn = make_ngram_analyzer
+            _skip = skipgram_analyzer
 
     # Count total tokens across all docs
     total_tokens = sum(len(tok.tokenize(doc)) for doc in docs)

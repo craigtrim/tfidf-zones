@@ -47,7 +47,6 @@ class TestWriteCsv:
         result = _FakeResult(scored, total_tokens=100)
         rows = self._write(result)
         assert "tf_pct" in rows[0]
-        assert "tf_cum" in rows[0]
         assert "tf_cum_norm" in rows[0]
 
     def test_tf_pct_computation(self):
@@ -63,7 +62,7 @@ class TestWriteCsv:
         assert float(the_row["tf_pct"]) == pytest.approx(0.6)
         assert float(of_row["tf_pct"]) == pytest.approx(0.4)
 
-    def test_tf_cum_is_running_sum(self):
+    def test_tf_cum_norm_matches_running_sum(self):
         scored = [
             {"term": "the", "score": 0.5, "tf": 50, "df": 1, "idf": 1.0},
             {"term": "of", "score": 0.4, "tf": 30, "df": 1, "idf": 1.0},
@@ -72,13 +71,13 @@ class TestWriteCsv:
         result = _FakeResult(scored, total_tokens=100)
         rows = self._write(result)
         # TF-sorted order: the(50), of(30), and(20)
-        # tf_cum: 0.5, 0.8, 1.0
+        # tf_cum_norm: 50, 80, 100
         the_row = next(r for r in rows if r["term"] == "the")
         of_row = next(r for r in rows if r["term"] == "of")
         and_row = next(r for r in rows if r["term"] == "and")
-        assert float(the_row["tf_cum"]) == pytest.approx(0.5)
-        assert float(of_row["tf_cum"]) == pytest.approx(0.8)
-        assert float(and_row["tf_cum"]) == pytest.approx(1.0)
+        assert int(the_row["tf_cum_norm"]) == 50
+        assert int(of_row["tf_cum_norm"]) == 80
+        assert int(and_row["tf_cum_norm"]) == 100
 
     def test_tf_cum_norm_scaled_1_to_100(self):
         scored = [

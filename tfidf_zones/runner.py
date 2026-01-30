@@ -40,6 +40,7 @@ def analyze_file(
     chunk_size: int = 2000,
     top_k: int = 10,
     wordnet: bool = False,
+    no_ngram_stopwords: bool = False,
 ) -> AnalysisResult:
     """Read a file and run TF-IDF zone analysis.
 
@@ -62,7 +63,7 @@ def analyze_file(
     else:
         from tfidf_zones.tfidf_engine import run
 
-    engine_result = run(text, ngram=ngram, chunk_size=chunk_size, top_k=top_k, wordnet=wordnet)
+    engine_result = run(text, ngram=ngram, chunk_size=chunk_size, top_k=top_k, wordnet=wordnet, no_ngram_stopwords=no_ngram_stopwords)
     zones = classify_zones(engine_result.all_scored, top_k=top_k, chunk_count=engine_result.chunk_count)
 
     elapsed = time.perf_counter() - start
@@ -123,6 +124,7 @@ def analyze_corpus(
     limit: int | None = None,
     no_chunk: bool = False,
     wordnet: bool = False,
+    no_ngram_stopwords: bool = False,
     on_progress: Callable[[int, int, str], None] | None = None,
 ) -> AnalysisResult:
     """Process all .txt files in a directory as a single corpus.
@@ -157,7 +159,7 @@ def analyze_corpus(
         else:
             from tfidf_zones.tfidf_engine import run_docs
 
-        engine_result = run_docs(texts, ngram=ngram, top_k=top_k, wordnet=wordnet)
+        engine_result = run_docs(texts, ngram=ngram, top_k=top_k, wordnet=wordnet, no_ngram_stopwords=no_ngram_stopwords)
     else:
         combined = "\n\n".join(texts)
         combined_length = len(combined)
@@ -167,7 +169,7 @@ def analyze_corpus(
         else:
             from tfidf_zones.tfidf_engine import run
 
-        engine_result = run(combined, ngram=ngram, chunk_size=chunk_size, top_k=top_k, wordnet=wordnet)
+        engine_result = run(combined, ngram=ngram, chunk_size=chunk_size, top_k=top_k, wordnet=wordnet, no_ngram_stopwords=no_ngram_stopwords)
 
     zones = classify_zones(engine_result.all_scored, top_k=top_k, chunk_count=engine_result.chunk_count)
 

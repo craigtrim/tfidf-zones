@@ -95,6 +95,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Filter tokens through WordNet — only recognized English words participate in TF-IDF",
     )
     parser.add_argument(
+        "--no-ngram-stopwords",
+        action="store_true",
+        default=False,
+        help="Discard n-grams containing stop/function words (only applies when --ngram >= 2)",
+    )
+    parser.add_argument(
         "--min-df",
         type=int,
         default=None,
@@ -151,6 +157,7 @@ def _print_result(result, args) -> None:
             chunk_size=result.chunk_size,
             elapsed=result.elapsed,
             wordnet=args.wordnet,
+            no_ngram_stopwords=args.no_ngram_stopwords,
             min_df=args.min_df,
             min_tf=args.min_tf,
         )
@@ -165,6 +172,7 @@ def _print_result(result, args) -> None:
             chunk_size=result.chunk_size,
             elapsed=result.elapsed,
             wordnet=args.wordnet,
+            no_ngram_stopwords=args.no_ngram_stopwords,
             min_df=args.min_df,
             min_tf=args.min_tf,
         )
@@ -285,6 +293,7 @@ def main() -> None:
                 chunk_size=args.chunk_size,
                 top_k=args.top_k,
                 wordnet=args.wordnet,
+                no_ngram_stopwords=args.no_ngram_stopwords,
             )
             _apply_filters(result, args.min_df, args.min_tf, args.top_k)
             _print_result(result, args)
@@ -307,6 +316,7 @@ def main() -> None:
                 limit=args.limit,
                 no_chunk=args.no_chunk,
                 wordnet=args.wordnet,
+                no_ngram_stopwords=args.no_ngram_stopwords,
                 on_progress=print_progress,
             )
             _apply_filters(result, args.min_df, args.min_tf, args.top_k)

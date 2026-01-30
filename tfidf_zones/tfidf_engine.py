@@ -260,6 +260,7 @@ def tfidf_compute(
     ngram: int = 1,
     chunk_size: int = 2000,
     top_k: int = 50,
+    no_ngram_stopwords: bool = False,
 ) -> dict:
     """Compute TF-IDF for a specific n-gram level.
 
@@ -299,6 +300,10 @@ def tfidf_compute(
         items = generate_skipgrams(tokens)
     else:
         items = generate_ngrams(tokens, ngram)
+
+    if no_ngram_stopwords and ngram >= 2:
+        from tfidf_zones.word_lists import filter_ngrams
+        items = filter_ngrams(items)
 
     if not items:
         return {
@@ -349,7 +354,7 @@ def tfidf_compute(
 # =============================================================================
 
 
-def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50, wordnet: bool = False) -> EngineResult:
+def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50, wordnet: bool = False, no_ngram_stopwords: bool = False) -> EngineResult:
     """Run the pure Python TF-IDF engine on raw text.
 
     Tokenizes text using the pystylometry Tokenizer, then computes TF-IDF.
@@ -362,7 +367,7 @@ def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50, word
         wordnet_filter=wordnet,
     )
     tokens = tokenizer.tokenize(text)
-    result = tfidf_compute(tokens, ngram=ngram, chunk_size=chunk_size, top_k=top_k)
+    result = tfidf_compute(tokens, ngram=ngram, chunk_size=chunk_size, top_k=top_k, no_ngram_stopwords=no_ngram_stopwords)
 
     return EngineResult(
         ngram_type=result["ngram_type"],
@@ -376,7 +381,7 @@ def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50, word
     )
 
 
-def run_docs(docs: list[str], ngram: int = 1, top_k: int = 50, wordnet: bool = False) -> EngineResult:
+def run_docs(docs: list[str], ngram: int = 1, top_k: int = 50, wordnet: bool = False, no_ngram_stopwords: bool = False) -> EngineResult:
     """Run TF-IDF where each document string is one corpus document (no chunking).
 
     Each entry in docs is tokenized independently and treated as a single
@@ -395,6 +400,11 @@ def run_docs(docs: list[str], ngram: int = 1, top_k: int = 50, wordnet: bool = F
         wordnet_filter=wordnet,
     )
 
+    _filter = None
+    if no_ngram_stopwords and ngram >= 2:
+        from tfidf_zones.word_lists import filter_ngrams
+        _filter = filter_ngrams
+
     # Tokenize each document separately and generate ngrams
     doc_chunks: list[list[str]] = []
     total_tokens = 0
@@ -408,6 +418,8 @@ def run_docs(docs: list[str], ngram: int = 1, top_k: int = 50, wordnet: bool = F
             items = generate_skipgrams(tokens)
         else:
             items = generate_ngrams(tokens, ngram)
+        if _filter is not None:
+            items = _filter(items)
         total_items += len(items)
         if items:
             doc_chunks.append(items)

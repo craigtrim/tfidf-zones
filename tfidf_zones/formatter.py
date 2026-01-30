@@ -61,6 +61,7 @@ def print_summary(
     chunk_size: int,
     elapsed: float,
     wordnet: bool = False,
+    no_ngram_stopwords: bool = False,
     min_df: int | None = None,
     min_tf: int | None = None,
 ) -> None:
@@ -74,6 +75,8 @@ def print_summary(
     _kv("chunk_size", str(chunk_size))
     if wordnet:
         _kv("wordnet", "on")
+    if no_ngram_stopwords:
+        _kv("stopwords", "on")
     if min_df is not None:
         _kv("min_df", str(min_df))
     if min_tf is not None:
@@ -132,6 +135,7 @@ def print_corpus_summary(
     chunk_size: int,
     elapsed: float,
     wordnet: bool = False,
+    no_ngram_stopwords: bool = False,
     min_df: int | None = None,
     min_tf: int | None = None,
 ) -> None:
@@ -150,6 +154,8 @@ def print_corpus_summary(
         _kv("chunk_size", str(chunk_size))
     if wordnet:
         _kv("wordnet", "on")
+    if no_ngram_stopwords:
+        _kv("stopwords", "on")
     if min_df is not None:
         _kv("min_df", str(min_df))
     if min_tf is not None:
