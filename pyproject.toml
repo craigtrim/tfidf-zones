@@ -23,12 +23,16 @@ packages = [{ include = "tfidf_zones" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.14"
-scikit-learn = "^1.5"
+scikit-learn = {version = "^1.5", optional = true}
 wordnet-lookup = ">=1.2"
 rich = "^13.0"
 
+[tool.poetry.extras]
+scikit = ["scikit-learn"]
+
 [tool.poetry.dev-dependencies]
 pytest = "*"
+scikit-learn = "^1.5"
 
 [tool.poetry.scripts]
 tfidf-zones = "tfidf_zones.cli:main"
