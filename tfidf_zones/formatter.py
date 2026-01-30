@@ -81,14 +81,15 @@ def print_df_stats(df_stats: dict) -> None:
 def print_zone(label: str, color: str, terms: list[dict]) -> None:
     """Print a single zone table."""
     print(f"  {_c(color + BOLD, label)}")
-    print(f"  {_c(DIM, '─' * 60)}")
-    print(f"  {_c(DIM, 'term                     score      df     idf')}")
+    print(f"  {_c(DIM, '─' * 68)}")
+    print(f"  {_c(DIM, 'term                     tf     df     idf      tfidf')}")
     for t in terms:
         term = t["term"]
+        tf = t.get("tf", 0)
         score = t["score"]
         df = t["df"]
         idf = t["idf"]
-        print(f"  {term:<24} {score:.6f}   df={df}  idf={idf:.4f}")
+        print(f"  {term:<24} tf={tf:<5} df={df:<4} idf={idf:.4f}  tfidf={score:.4f}")
     print()
 
 
@@ -105,12 +106,37 @@ def print_footer() -> None:
     print()
 
 
-def print_file_separator(filename: str) -> None:
-    """Print a separator between files in directory mode."""
+def print_corpus_summary(
+    dirname: str,
+    engine: str,
+    ngram_type: str,
+    file_count: int,
+    total_text_length: int,
+    tokens: int,
+    chunks: int,
+    chunk_size: int,
+    elapsed: float,
+) -> None:
+    """Print the summary block for corpus (directory) mode."""
+    print(f"  {_c(DIM, 'directory')}    {_c(WHITE, dirname)}")
+    print(f"  {_c(DIM, 'engine')}       {_c(WHITE, engine)}")
+    print(f"  {_c(DIM, 'ngram_type')}   {_c(WHITE, ngram_type)}")
+    print(f"  {_c(DIM, 'files')}        {_c(WHITE, str(file_count))}")
+    print(f"  {_c(DIM, 'text_length')}  {_c(WHITE, f'{total_text_length:,} chars')}")
+    print(f"  {_c(DIM, 'tokens')}       {_c(WHITE, f'{tokens:,}')}")
+    if chunk_size == 0:
+        print(f"  {_c(DIM, 'documents')}    {_c(WHITE, str(chunks))}")
+        print(f"  {_c(DIM, 'chunking')}     {_c(WHITE, 'off (1 file = 1 doc)')}")
+    else:
+        print(f"  {_c(DIM, 'chunks')}       {_c(WHITE, str(chunks))}")
+        print(f"  {_c(DIM, 'chunk_size')}   {_c(WHITE, str(chunk_size))}")
+    print(f"  {_c(DIM, 'elapsed')}      {_c(GREEN, f'{elapsed:.3f}s')}")
     print()
-    print(f"  {_c(DIM, '━' * 60)}")
-    print(f"  {_c(BOLD + WHITE, filename)}")
-    print(f"  {_c(DIM, '━' * 60)}")
+
+
+def print_progress(current: int, total: int, filename: str) -> None:
+    """Print file reading progress for directory mode."""
+    print(f"  {_c(DIM, f'[{current}/{total}]')} {_c(WHITE, filename)}", flush=True)
 
 
 def print_error(message: str) -> None:
