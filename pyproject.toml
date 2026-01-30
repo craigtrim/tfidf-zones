@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tfidf-zones"
-version = "0.1.0"
+version = "1.1.0"
 description = "TF-IDF zone analysis CLI — classify terms into too-common, goldilocks, and too-rare zones"
 authors = ["Craig Trim <craigtrim@gmail.com>"]
 maintainers = ["Craig Trim <craigtrim@gmail.com>"]
@@ -8,7 +8,7 @@ license = "MIT"
 readme = "README.md"
 keywords = ["tfidf", "tf-idf", "nlp", "text-analysis", "zones"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
@@ -24,6 +24,7 @@ packages = [{ include = "tfidf_zones" }]
 [tool.poetry.dependencies]
 python = ">=3.11,<3.14"
 scikit-learn = "^1.5"
+wordnet-lookup = ">=1.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

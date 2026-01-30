@@ -325,7 +325,18 @@ files = [
     {file = "threadpoolctl-3.6.0.tar.gz", hash = "sha256:8ab8b4aa3491d812b623328249fab5302a68d2d71745c8a4c719a2fcaba9f44e"},
 ]
 
+[[package]]
+name = "wordnet-lookup"
+version = "1.2.3"
+description = "Static Dictionaries for Rapid Wordnet Lookups"
+optional = false
+python-versions = "<4.0,>=3.7"
+files = [
+    {file = "wordnet_lookup-1.2.3-py3-none-any.whl", hash = "sha256:d0e743e9591890629bd52fdb60cfa4ea133dd1a3a7369671d442bdedfebc737f"},
+    {file = "wordnet_lookup-1.2.3.tar.gz", hash = "sha256:c110b47131905d4e47d1711164c83e5a4c211fc58aa483d7a0cd4a02e1123eed"},
+]
+
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.14"
-content-hash = "531799fd6b98fb72cdaf43698eed97f3e848acb4f4ca6859961bf3e106eedb13"
+content-hash = "814ca9c73ff553f0548f22d277874ce49fac447c400561f43878ac9a7f2dc9ae"
