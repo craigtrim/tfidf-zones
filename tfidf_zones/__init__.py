@@ -1,3 +1,3 @@
-from tfidf_zones.runner import analyze_directory, analyze_file
+from tfidf_zones.runner import analyze_corpus, analyze_file
 
-__all__ = ["analyze_file", "analyze_directory"]
+__all__ = ["analyze_file", "analyze_corpus"]
