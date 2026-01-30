@@ -2,10 +2,9 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![Poetry](https://img.shields.io/badge/packaging-poetry-cyan.svg)](https://python-poetry.org/)
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.5-orange.svg)](https://scikit-learn.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Downloads](https://img.shields.io/pepy/dt/tfidf-zones)](https://pepy.tech/project/tfidf-zones)
-[![Downloads/Month](https://img.shields.io/pepy/dm/tfidf-zones)](https://pepy.tech/project/tfidf-zones)
+[![Downloads](https://img.shields.io/pypi/dd/tfidf-zones)](https://pypi.org/project/tfidf-zones/)
+[![Downloads/Month](https://img.shields.io/pypi/dm/tfidf-zones)](https://pypi.org/project/tfidf-zones/)
 
 CLI tool that classifies terms in text documents into three zones based on TF-IDF and document frequency:
 
@@ -27,8 +26,8 @@ poetry install
 # Analyze a single file
 poetry run tfidf-zones --file novel.txt --output results.csv
 
-# Use scikit-learn engine with bigrams
-poetry run tfidf-zones --file novel.txt --scikit --ngram 2 --output results.csv
+# Analyze with bigrams
+poetry run tfidf-zones --file novel.txt --ngram 2 --output results.csv
 
 # Analyze a directory of .txt files
 poetry run tfidf-zones --dir ./texts/ --output results.csv
@@ -75,7 +74,7 @@ Use `--min-df` and `--min-tf` to remove terms that appear in too few documents o
 |------|---------|-------------|
 | `--file` | | Path to a single text file |
 | `--dir` | | Path to a directory of `.txt` files |
-| `--scikit` | off | Use scikit-learn TF-IDF engine (default: pure Python) |
+| `--scikit` | off | Use scikit-learn TF-IDF engine (optional; supports all the same flags) |
 | `--top-k` | `10` | Number of terms per zone |
 | `--ngram` | `1` | N-gram level (1–5, or 6 for skipgrams) |
 | `--chunk-size` | `2000` | Tokens per chunk (min 100) |
@@ -93,4 +92,18 @@ Either `--file` or `--dir` is required (not both).
 
 Text is tokenized, split into chunks, and scored with TF-IDF. Chunking a single document into sub-documents prevents IDF from collapsing to a constant. Terms are then bucketed into zones by their document-frequency percentile.
 
-Two engines are available: a pure-Python implementation and a scikit-learn backed implementation. Both use smooth IDF (`log((1+N)/(1+DF)) + 1`) and produce comparable results.
+## Engines
+
+The default engine is a **pure-Python implementation** that requires no heavy dependencies and generally produces better results for zone analysis. It uses smooth IDF (`log((1+N)/(1+DF)) + 1`) with full control over tokenization, n-gram generation, and scoring.
+
+A **scikit-learn engine** (`--scikit`) is also available for users familiar with the scikit-learn ecosystem or who want to compare results against its `TfidfVectorizer`. Both engines use the same IDF formula and produce comparable output. scikit-learn is an optional dependency — install it with:
+
+```bash
+pip install tfidf-zones[scikit]
+```
+
+or if using Poetry:
+
+```bash
+poetry install -E scikit
+```
