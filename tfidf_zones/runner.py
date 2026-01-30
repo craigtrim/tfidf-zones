@@ -63,7 +63,7 @@ def analyze_file(
         from tfidf_zones.tfidf_engine import run
 
     engine_result = run(text, ngram=ngram, chunk_size=chunk_size, top_k=top_k, wordnet=wordnet)
-    zones = classify_zones(engine_result.all_scored, top_k=top_k)
+    zones = classify_zones(engine_result.all_scored, top_k=top_k, chunk_count=engine_result.chunk_count)
 
     elapsed = time.perf_counter() - start
 
@@ -169,7 +169,7 @@ def analyze_corpus(
 
         engine_result = run(combined, ngram=ngram, chunk_size=chunk_size, top_k=top_k, wordnet=wordnet)
 
-    zones = classify_zones(engine_result.all_scored, top_k=top_k)
+    zones = classify_zones(engine_result.all_scored, top_k=top_k, chunk_count=engine_result.chunk_count)
 
     elapsed = time.perf_counter() - start
 
