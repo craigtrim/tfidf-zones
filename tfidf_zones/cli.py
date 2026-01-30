@@ -133,17 +133,34 @@ def _print_result(result) -> None:
 
 
 def _write_csv(result, output_path: str) -> None:
-    """Write all scored terms to CSV."""
+    """Write all scored terms to CSV with cumulative TF columns."""
+    all_scored = result.engine_result.all_scored
+    total_tokens = result.engine_result.total_tokens
+
+    # Build cumulative TF lookup: sort by TF descending, compute running sum
+    tf_sorted = sorted(all_scored, key=lambda x: x.get("tf", 0), reverse=True)
+    cum_lookup: dict[str, tuple[float, float, int]] = {}
+    running = 0.0
+    for entry in tf_sorted:
+        tf_pct = entry.get("tf", 0) / total_tokens if total_tokens > 0 else 0.0
+        running += tf_pct
+        tf_cum_norm = max(1, round(running * 100)) if total_tokens > 0 else 0
+        cum_lookup[entry["term"]] = (tf_pct, running, tf_cum_norm)
+
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["term", "tf", "df", "idf", "tfidf"])
-        for entry in result.engine_result.all_scored:
+        writer.writerow(["term", "tf", "df", "idf", "tfidf", "tf_pct", "tf_cum", "tf_cum_norm"])
+        for entry in all_scored:
+            tf_pct, tf_cum, tf_cum_norm = cum_lookup[entry["term"]]
             writer.writerow([
                 entry["term"],
                 entry.get("tf", 0),
                 entry["df"],
                 entry["idf"],
                 entry["score"],
+                tf_pct,
+                tf_cum,
+                tf_cum_norm,
             ])
 
 
