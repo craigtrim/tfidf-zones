@@ -4,6 +4,8 @@
 [![Poetry](https://img.shields.io/badge/packaging-poetry-cyan.svg)](https://python-poetry.org/)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-1.5-orange.svg)](https://scikit-learn.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
+[![Downloads](https://img.shields.io/pepy/dt/tfidf-zones)](https://pepy.tech/project/tfidf-zones)
+[![Downloads/Month](https://img.shields.io/pepy/dm/tfidf-zones)](https://pepy.tech/project/tfidf-zones)
 
 CLI tool that classifies terms in text documents into three zones based on TF-IDF and document frequency:
 
