@@ -388,7 +388,10 @@ files = [
     {file = "wordnet_lookup-1.2.3.tar.gz", hash = "sha256:c110b47131905d4e47d1711164c83e5a4c211fc58aa483d7a0cd4a02e1123eed"},
 ]
 
+[extras]
+scikit = ["scikit-learn"]
+
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.14"
-content-hash = "e1e6c55d2d8ba5f046010afe6de51048999dbd0bfca9035343d2fd83b6fe48dd"
+content-hash = "5fa21a23f073c48f264981ce2a2369ddf3ca8b76923ede18dcbccedec65c0556"
