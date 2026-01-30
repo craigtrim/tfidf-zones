@@ -181,18 +181,30 @@ def chunk_tokens(tokens: list[str], chunk_size: int = 2000) -> list[list[str]]:
 # =============================================================================
 
 
-def aggregate_tfidf(chunks: list[list[str]], idf: dict[str, float]) -> dict[str, float]:
-    """Compute TF-IDF per chunk and average raw scores across chunks."""
+def aggregate_tfidf(
+    chunks: list[list[str]], idf: dict[str, float],
+) -> tuple[dict[str, float], dict[str, int]]:
+    """Compute TF-IDF per chunk and average raw scores across chunks.
+
+    Returns:
+        Tuple of (tfidf_scores, raw_counts) where raw_counts maps each term
+        to its total occurrence count across all chunks.
+    """
     if not chunks:
-        return {}
+        return {}, {}
     merged: dict[str, float] = defaultdict(float)
+    raw_counts: dict[str, int] = Counter()
     for chunk in chunks:
         tf = compute_tf(chunk)
         raw_scores = scale_tf_by_idf(tf, idf)
         for term, score in raw_scores.items():
             merged[term] += score
+        raw_counts.update(chunk)
     n = len(chunks)
-    return {term: score / n for term, score in merged.items()}
+    return (
+        {term: score / n for term, score in merged.items()},
+        dict(raw_counts),
+    )
 
 
 # =============================================================================
@@ -212,11 +224,11 @@ def top_k_terms(
     sorted_terms = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     result = []
     for term, score in sorted_terms[:k]:
-        entry = {"term": term, "score": round(score, 6)}
+        entry = {"term": term, "score": score}
         if df is not None:
             entry["df"] = df.get(term, 0)
         if idf is not None:
-            entry["idf"] = round(idf.get(term, 0.0), 6)
+            entry["idf"] = idf.get(term, 0.0)
         result.append(entry)
     return result
 
@@ -302,16 +314,17 @@ def tfidf_compute(
 
     chunks = chunk_tokens(items, chunk_size)
     idf, df = compute_idf(chunks)
-    scores = aggregate_tfidf(chunks, idf)
+    scores, raw_counts = aggregate_tfidf(chunks, idf)
 
-    # Build all_scored list (every term with score/df/idf)
+    # Build all_scored list (every term with score/tf/df/idf)
     all_scored = sorted(
         [
             {
                 "term": term,
-                "score": round(score, 6),
+                "score": score,
+                "tf": raw_counts.get(term, 0),
                 "df": df.get(term, 0),
-                "idf": round(idf.get(term, 0.0), 6),
+                "idf": idf.get(term, 0.0),
             }
             for term, score in scores.items()
         ],
@@ -336,7 +349,7 @@ def tfidf_compute(
 # =============================================================================
 
 
-def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50) -> EngineResult:
+def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50, wordnet: bool = False) -> EngineResult:
     """Run the pure Python TF-IDF engine on raw text.
 
     Tokenizes text using the pystylometry Tokenizer, then computes TF-IDF.
@@ -346,6 +359,7 @@ def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50) -> E
         strip_punctuation=True,
         strip_numbers=True,
         min_length=2,
+        wordnet_filter=wordnet,
     )
     tokens = tokenizer.tokenize(text)
     result = tfidf_compute(tokens, ngram=ngram, chunk_size=chunk_size, top_k=top_k)
@@ -359,4 +373,82 @@ def run(text: str, ngram: int = 1, chunk_size: int = 2000, top_k: int = 50) -> E
         total_tokens=result["total_tokens"],
         chunk_count=result["chunk_count"],
         df_stats=result["df_stats"],
+    )
+
+
+def run_docs(docs: list[str], ngram: int = 1, top_k: int = 50, wordnet: bool = False) -> EngineResult:
+    """Run TF-IDF where each document string is one corpus document (no chunking).
+
+    Each entry in docs is tokenized independently and treated as a single
+    document for IDF computation.
+    """
+    if ngram < 1 or ngram > 6:
+        raise ValueError(f"ngram must be 1-6, got {ngram}")
+    if top_k < 1:
+        raise ValueError(f"top_k must be >= 1, got {top_k}")
+
+    tokenizer = Tokenizer(
+        lowercase=True,
+        strip_punctuation=True,
+        strip_numbers=True,
+        min_length=2,
+        wordnet_filter=wordnet,
+    )
+
+    # Tokenize each document separately and generate ngrams
+    doc_chunks: list[list[str]] = []
+    total_tokens = 0
+    total_items = 0
+    for doc in docs:
+        tokens = tokenizer.tokenize(doc)
+        total_tokens += len(tokens)
+        if ngram == 1:
+            items = tokens
+        elif ngram == 6:
+            items = generate_skipgrams(tokens)
+        else:
+            items = generate_ngrams(tokens, ngram)
+        total_items += len(items)
+        if items:
+            doc_chunks.append(items)
+
+    if not doc_chunks:
+        return EngineResult(
+            ngram_type=NGRAM_LABELS[ngram],
+            top_terms=[],
+            all_scored=[],
+            total_unique_terms=0,
+            total_items=0,
+            total_tokens=total_tokens,
+            chunk_count=0,
+            df_stats={"mean": 0.0, "median": 0.0, "mode": 0},
+        )
+
+    idf, df = compute_idf(doc_chunks)
+    scores, raw_counts = aggregate_tfidf(doc_chunks, idf)
+
+    all_scored = sorted(
+        [
+            {
+                "term": term,
+                "score": score,
+                "tf": raw_counts.get(term, 0),
+                "df": df.get(term, 0),
+                "idf": idf.get(term, 0.0),
+            }
+            for term, score in scores.items()
+        ],
+        key=lambda x: x["score"],
+        reverse=True,
+    )
+
+    return EngineResult(
+        ngram_type=NGRAM_LABELS[ngram],
+        top_terms=all_scored[:top_k],
+        all_scored=all_scored,
+        total_unique_terms=len(scores),
+        total_items=total_items,
+        total_tokens=total_tokens,
+        chunk_count=len(doc_chunks),
+        df_stats=compute_df_stats(df),
     )
